@@ -1,0 +1,47 @@
+// A pest parser grammar for the pci.ids database.
+file = _{ SOI ~ lines ~ EOI }
+lines = _{ "\n"* ~ (line ~ "\n"+) * ~ line? }
+line = _{
+    vendor_line |
+    device_line |
+    subsystem_line |
+    class_line |
+    subclass_line |
+    prog_if_line
+}
+
+// PCI id data lines
+vendor_line = { vendor_id ~ vendor_name }
+vendor_id = @{ U16 }
+vendor_name = @{ STRING_TO_EOL }
+
+device_line = { "\t" ~ device_id ~ device_name }
+device_id = @{ U16 }
+device_name = @{ STRING_TO_EOL }
+
+subsystem_line = { "\t\t" ~ subsystem_id ~ subsystem_name }
+subsystem_id = { subvendor_id ~ subdevice_id }
+subvendor_id = @{ U16 }
+subdevice_id = @{ U16 }
+subsystem_name = @{ STRING_TO_EOL }
+
+// PCI class data lines
+class_line = { "C" ~ class_id ~ class_name }
+class_id = @{ U8 }
+class_name = @{ STRING_TO_EOL }
+
+subclass_line = { "\t" ~ subclass_id ~ subclass_name }
+subclass_id = @{ U8 }
+subclass_name = @{ STRING_TO_EOL }
+
+prog_if_line = { "\t\t" ~ prog_if_id ~ prog_if_name }
+prog_if_id = @{ U8 }
+prog_if_name = @{ STRING_TO_EOL }
+
+// basic tokens
+STRING_TO_EOL = @{(!"\n" ~ ANY)* }
+U16 = { HEX_DIGIT{4} }
+U8 = { HEX_DIGIT{2} }
+HEX_DIGIT = { ASCII_DIGIT | ('a'..'f') | ('A'..'F') }
+WHITESPACE = _{ " " }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
