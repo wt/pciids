@@ -1,47 +1,53 @@
 // A pest parser grammar for the pci.ids database.
-file = _{ SOI ~ lines ~ EOI }
-lines = _{ "\n"* ~ (line ~ "\n"+) * ~ line? }
+file = _{ SOI ~ lines ~ &EOI }
+lines = _{ (line)* }
 line = _{
-    vendor_line |
-    device_line |
-    subsystem_line |
-    class_line |
-    subclass_line |
-    prog_if_line
+    empty_line |
+    vendor |
+    class
 }
 
+empty_line = _{ NEWLINE }
+
 // PCI id data lines
-vendor_line = { vendor_id ~ vendor_name }
+vendor = { vendor_line ~ device* }
+vendor_line = _{ vendor_id ~ vendor_name ~ EOL }
 vendor_id = @{ U16 }
 vendor_name = @{ STRING_TO_EOL }
 
-device_line = { "\t" ~ device_id ~ device_name }
+device = { device_line ~ subsystem* }
+device_line = _{ "\t" ~ device_id ~ device_name  ~ EOL }
 device_id = @{ U16 }
 device_name = @{ STRING_TO_EOL }
 
-subsystem_line = { "\t\t" ~ subsystem_id ~ subsystem_name }
+subsystem = { subsystem_line }
+subsystem_line = _{ "\t\t" ~ subsystem_id ~ subsystem_name  ~ EOL }
 subsystem_id = { subvendor_id ~ subdevice_id }
 subvendor_id = @{ U16 }
 subdevice_id = @{ U16 }
 subsystem_name = @{ STRING_TO_EOL }
 
 // PCI class data lines
-class_line = { "C" ~ class_id ~ class_name }
+class = {class_line ~ subclass* }
+class_line = _{ "C" ~ class_id ~ class_name ~ EOL }
 class_id = @{ U8 }
 class_name = @{ STRING_TO_EOL }
 
-subclass_line = { "\t" ~ subclass_id ~ subclass_name }
+subclass = { subclass_line ~ prog_if* }
+subclass_line = _{ "\t" ~ subclass_id ~ subclass_name ~ EOL }
 subclass_id = @{ U8 }
 subclass_name = @{ STRING_TO_EOL }
 
-prog_if_line = { "\t\t" ~ prog_if_id ~ prog_if_name }
+prog_if = { prog_if_line }
+prog_if_line = _{ "\t\t" ~ prog_if_id ~ prog_if_name ~ EOL }
 prog_if_id = @{ U8 }
 prog_if_name = @{ STRING_TO_EOL }
 
 // basic tokens
-STRING_TO_EOL = @{(!"\n" ~ ANY)* }
+EOL = _{ (NEWLINE|&EOI) }
+STRING_TO_EOL = @{(!EOL ~ ANY)* }
 U16 = { HEX_DIGIT{4} }
 U8 = { HEX_DIGIT{2} }
 HEX_DIGIT = { ASCII_DIGIT | ('a'..'f') | ('A'..'F') }
 WHITESPACE = _{ " " }
-COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY)* ~ EOL }
