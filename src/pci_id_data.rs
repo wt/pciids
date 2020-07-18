@@ -21,7 +21,7 @@ impl PciIdData {
     }
 
     pub fn add_pci_ids_data(
-        self: &mut PciIdData,
+        &mut self,
         pciids_data_stream: &mut dyn std::io::Read,
     ) -> Result<()> {
         let mut num_vendors = 0;
@@ -65,7 +65,7 @@ impl PciIdData {
     }
 
     fn add_vendor_from_vendor_pairs(
-        self: &mut Self,
+        &mut self,
         vendor_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
         let vendor_id_pair = vendor_pairs.next().ok_or(anyhow!("No vendor id found."))?;
@@ -84,7 +84,7 @@ impl PciIdData {
     }
 
     fn add_class_from_class_pairs(
-        self: &mut Self,
+        &mut self,
         class_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
         let class_id_pair = class_pairs.next().ok_or(anyhow!("No class id found."))?;
@@ -122,7 +122,7 @@ impl PciVendor {
     }
 
     fn add_device_from_device_pairs(
-        self: &mut Self,
+        &mut self,
         device_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
         let device_id_pair = device_pairs.next().ok_or(anyhow!("No device id found."))?;
@@ -158,7 +158,7 @@ impl PciDevice {
     }
 
     fn add_subsystem_from_subsystem_pairs(
-        self: &mut Self,
+        &mut self,
         subsystem_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
         let subsystem_id_pair = subsystem_pairs
@@ -225,7 +225,7 @@ impl PciClass {
     }
 
     fn add_subclass_from_subclass_pairs(
-        self: &mut Self,
+        &mut self,
         subclass_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
         let subclass_id_pair = subclass_pairs
@@ -263,7 +263,7 @@ impl PciSubclass {
     }
 
     fn add_prog_if_from_prog_if_pairs(
-        self: &mut Self,
+        &mut self,
         prog_if_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
         let prog_if_id_pair = prog_if_pairs
@@ -347,7 +347,7 @@ mod tests {
             Self::new_with_devices(Vec::<_>::new())
         }
 
-        fn check(self: &Self, vendor: &PciVendor) -> Result<()> {
+        fn check(&self, vendor: &PciVendor) -> Result<()> {
             assert_eq!(vendor.id, self.expected_id);
             assert_eq!(vendor.name, self.expected_name);
             Ok(())
@@ -526,7 +526,7 @@ mod tests {
             Self::new_with_subsystems(Vec::<_>::new())
         }
 
-        fn check(self: &Self, device: &PciDevice) -> Result<()> {
+        fn check(&self, device: &PciDevice) -> Result<()> {
             assert_eq!(device.id, self.expected_id);
             assert_eq!(device.name, self.expected_name);
             Ok(())
@@ -686,7 +686,7 @@ mod tests {
             }
         }
 
-        fn check(self: &Self, subsystem: &PciSubsystem) -> Result<()> {
+        fn check(&self, subsystem: &PciSubsystem) -> Result<()> {
             assert_eq!(subsystem.subvendor_id, self.expected_subvendor_id);
             assert_eq!(subsystem.subdevice_id, self.expected_subdevice_id);
             assert_eq!(subsystem.name, self.expected_subsystem_name);
@@ -837,7 +837,7 @@ mod tests {
             Self::new_with_subclasses(Vec::<_>::new())
         }
 
-        fn check(self: &Self, class: &PciClass) -> Result<()> {
+        fn check(&self, class: &PciClass) -> Result<()> {
             assert_eq!(class.id, self.expected_id);
             assert_eq!(class.name, self.expected_name);
             Ok(())
@@ -1010,7 +1010,7 @@ mod tests {
             Self::new_with_prog_ifs(Vec::<_>::new())
         }
 
-        fn check(self: &Self, subclass: &PciSubclass) -> Result<()> {
+        fn check(&self, subclass: &PciSubclass) -> Result<()> {
             assert_eq!(subclass.id, self.expected_id);
             assert_eq!(subclass.name, self.expected_name);
             Ok(())
@@ -1153,7 +1153,7 @@ mod tests {
             }
         }
 
-        fn check(self: &Self, class: &PciProgInterface) -> Result<()> {
+        fn check(&self, class: &PciProgInterface) -> Result<()> {
             assert_eq!(class.id, self.expected_id);
             assert_eq!(class.name, self.expected_name);
             Ok(())
