@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::concat;
+use std::ops::Index;
 
 use anyhow::{anyhow, Context, Result};
 use log::{debug, info};
@@ -141,6 +142,22 @@ impl PciVendor {
     }
 }
 
+impl PartialEq for PciVendor {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.name == other.name
+    }
+}
+
+impl Eq for PciVendor {}
+
+impl Index<&u16> for PciVendor {
+    type Output = PciDevice;
+
+    fn index(&self, index: &u16) -> &Self::Output {
+        &self.devices[index]
+    }
+}
+
 #[derive(Debug)]
 struct PciDevice {
     id: u16,
@@ -189,6 +206,22 @@ impl PciDevice {
     }
 }
 
+impl PartialEq for PciDevice {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.name == other.name
+    }
+}
+
+impl Eq for PciDevice {}
+
+impl Index<&(u16, u16)> for PciDevice {
+    type Output = PciSubsystem;
+
+    fn index(&self, index: &(u16, u16)) -> &Self::Output {
+        &self.subsystems[index]
+    }
+}
+
 #[derive(Debug)]
 struct PciSubsystem {
     subvendor_id: u16,
@@ -205,6 +238,14 @@ impl PciSubsystem {
         }
     }
 }
+
+impl PartialEq for PciSubsystem {
+    fn eq(&self, other: &Self) -> bool {
+        self.subvendor_id == other.subvendor_id && self.subdevice_id == other.subdevice_id && self.name == other.name
+    }
+}
+
+impl Eq for PciSubsystem {}
 
 type PciClasses = HashMap<u8, PciClass>;
 
@@ -243,6 +284,22 @@ impl PciClass {
         }
         self.subclasses.entry(subclass_id).or_insert(subclass);
         Ok(())
+    }
+}
+
+impl PartialEq for PciClass {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.name == other.name
+    }
+}
+
+impl Eq for PciClass {}
+
+impl Index<&u8> for PciClass {
+    type Output = PciSubclass;
+
+    fn index(&self, index: &u8) -> &Self::Output {
+        &self.subclasses[index]
     }
 }
 
@@ -285,6 +342,22 @@ impl PciSubclass {
     }
 }
 
+impl PartialEq for PciSubclass {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.name == other.name
+    }
+}
+
+impl Eq for PciSubclass {}
+
+impl Index<&u8> for PciSubclass {
+    type Output = PciProgInterface;
+
+    fn index(&self, index: &u8) -> &Self::Output {
+        &self.prog_interfaces[index]
+    }
+}
+
 #[derive(Debug)]
 struct PciProgInterface {
     id: u8,
@@ -299,6 +372,14 @@ impl PciProgInterface {
         }
     }
 }
+
+impl PartialEq for PciProgInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.name == other.name
+    }
+}
+
+impl Eq for PciProgInterface {}
 
 #[derive(Parser)]
 #[grammar = "pciids.pest"]
@@ -1292,7 +1373,7 @@ mod tests {
                     return Err(anyhow!("Subclass didn't parse correctly: {}", subclass.simple_unparsed_data));
                 }
                 for prog_if in subclass.prog_ifs {
-                    if !pci_data.classes[&class.expected_id].subclasses[&subclass.expected_id].prog_interfaces.contains_key(&prog_if.expected_id) {
+                    if !pci_data.classes[&class.expected_id][&subclass.expected_id].prog_interfaces.contains_key(&prog_if.expected_id) {
                         return Err(anyhow!("Programming interface didn't parse correctly: {}", subclass.simple_unparsed_data));
                     }
                 }
