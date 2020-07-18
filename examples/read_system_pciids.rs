@@ -1,5 +1,4 @@
-mod pci_id_data;
-use crate::pci_id_data::PciIdData;
+use pciids::PciIdData;
 
 use anyhow::Result;
 
