@@ -1,12 +1,18 @@
 [package]
 name = "pciids"
+description = "A library to parse the pci.ids data file."
+homepage = "https://github.com/wt/pciids"
+repository = "https://github.com/wt/pciids"
 version = "0.1.0"
 authors = ["Wren Turkal <wt@penguintechs.org>"]
+license = "MIT OR Apache-2.0"
 edition = "2018"
+readme = "README.md"
+categories = ["data-structures"]
+keywords = ["pci"]
 
 [dependencies]
 anyhow = "1.0"
-indoc = "0.3"
 log = "0.4"
 paw = "1.0"
 pest = "2.0"
