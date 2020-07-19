@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::concat;
-use std::ops::Index;
 
 use anyhow::{anyhow, Context, Result};
 use log::{debug, info};
@@ -21,10 +20,7 @@ impl PciIdData {
         }
     }
 
-    pub fn add_pci_ids_data(
-        &mut self,
-        pciids_data_stream: &mut dyn std::io::Read,
-    ) -> Result<()> {
+    pub fn add_pci_ids_data(&mut self, pciids_data_stream: &mut dyn std::io::Read) -> Result<()> {
         let mut num_vendors = 0;
         let mut num_classes = 0;
 
@@ -84,6 +80,13 @@ impl PciIdData {
         Ok(())
     }
 
+    pub fn get_vendor(&self, vendor_id: &u16) -> Result<&PciVendor> {
+        Ok(self
+            .vendors
+            .get(&vendor_id)
+            .ok_or(anyhow!("Vendor {} not found.", vendor_id))?)
+    }
+
     fn add_class_from_class_pairs(
         &mut self,
         class_pairs: &mut pest::iterators::Pairs<Rule>,
@@ -102,14 +105,21 @@ impl PciIdData {
         self.classes.entry(class_id).or_insert(class);
         Ok(())
     }
+
+    pub fn get_class(&self, class_id: &u8) -> Result<&PciClass> {
+        Ok(self
+            .classes
+            .get(&class_id)
+            .ok_or(anyhow!("Class {} not found.", class_id))?)
+    }
 }
 
 type PciVendors = HashMap<u16, PciVendor>;
 
 #[derive(Debug)]
-struct PciVendor {
-    id: u16,
-    name: String,
+pub struct PciVendor {
+    pub id: u16,
+    pub name: String,
     devices: HashMap<u16, PciDevice>,
 }
 
@@ -140,6 +150,13 @@ impl PciVendor {
         self.devices.entry(device_id).or_insert(pci_device);
         Ok(())
     }
+
+    pub fn get_device(&self, device_id: &u16) -> Result<&PciDevice> {
+        Ok(self
+            .devices
+            .get(&device_id)
+            .ok_or(anyhow!("Device {} not found.", device_id))?)
+    }
 }
 
 impl PartialEq for PciVendor {
@@ -150,18 +167,10 @@ impl PartialEq for PciVendor {
 
 impl Eq for PciVendor {}
 
-impl Index<&u16> for PciVendor {
-    type Output = PciDevice;
-
-    fn index(&self, index: &u16) -> &Self::Output {
-        &self.devices[index]
-    }
-}
-
 #[derive(Debug)]
-struct PciDevice {
-    id: u16,
-    name: String,
+pub struct PciDevice {
+    pub id: u16,
+    pub name: String,
     subsystems: HashMap<(u16, u16), PciSubsystem>,
 }
 
@@ -204,6 +213,14 @@ impl PciDevice {
             .or_insert(pci_subsystem);
         Ok(())
     }
+
+    pub fn get_subsystem(&self, subsystem_id: &(u16, u16)) -> Result<&PciSubsystem> {
+        Ok(self.subsystems.get(&subsystem_id).ok_or(anyhow!(
+            "Subsystem {} {} not found.",
+            subsystem_id.0,
+            subsystem_id.1
+        ))?)
+    }
 }
 
 impl PartialEq for PciDevice {
@@ -214,19 +231,11 @@ impl PartialEq for PciDevice {
 
 impl Eq for PciDevice {}
 
-impl Index<&(u16, u16)> for PciDevice {
-    type Output = PciSubsystem;
-
-    fn index(&self, index: &(u16, u16)) -> &Self::Output {
-        &self.subsystems[index]
-    }
-}
-
 #[derive(Debug)]
-struct PciSubsystem {
-    subvendor_id: u16,
-    subdevice_id: u16,
-    name: String,
+pub struct PciSubsystem {
+    pub subvendor_id: u16,
+    pub subdevice_id: u16,
+    pub name: String,
 }
 
 impl PciSubsystem {
@@ -241,7 +250,9 @@ impl PciSubsystem {
 
 impl PartialEq for PciSubsystem {
     fn eq(&self, other: &Self) -> bool {
-        self.subvendor_id == other.subvendor_id && self.subdevice_id == other.subdevice_id && self.name == other.name
+        self.subvendor_id == other.subvendor_id
+            && self.subdevice_id == other.subdevice_id
+            && self.name == other.name
     }
 }
 
@@ -250,9 +261,9 @@ impl Eq for PciSubsystem {}
 type PciClasses = HashMap<u8, PciClass>;
 
 #[derive(Debug)]
-struct PciClass {
-    id: u8,
-    name: String,
+pub struct PciClass {
+    pub id: u8,
+    pub name: String,
     subclasses: HashMap<u8, PciSubclass>,
 }
 
@@ -285,6 +296,13 @@ impl PciClass {
         self.subclasses.entry(subclass_id).or_insert(subclass);
         Ok(())
     }
+
+    pub fn get_subclass(&self, subclass_id: &u8) -> Result<&PciSubclass> {
+        Ok(self
+            .subclasses
+            .get(&subclass_id)
+            .ok_or(anyhow!("Subclass {} not found.", subclass_id))?)
+    }
 }
 
 impl PartialEq for PciClass {
@@ -295,18 +313,10 @@ impl PartialEq for PciClass {
 
 impl Eq for PciClass {}
 
-impl Index<&u8> for PciClass {
-    type Output = PciSubclass;
-
-    fn index(&self, index: &u8) -> &Self::Output {
-        &self.subclasses[index]
-    }
-}
-
 #[derive(Debug)]
-struct PciSubclass {
-    id: u8,
-    name: String,
+pub struct PciSubclass {
+    pub id: u8,
+    pub name: String,
     prog_interfaces: HashMap<u8, PciProgInterface>,
 }
 
@@ -340,6 +350,13 @@ impl PciSubclass {
         self.prog_interfaces.entry(prog_if_id).or_insert(prog_if);
         Ok(())
     }
+
+    pub fn get_prog_interface(&self, prog_interface_id: &u8) -> Result<&PciProgInterface> {
+        Ok(self.prog_interfaces.get(&prog_interface_id).ok_or(anyhow!(
+            "Programming interface {} not found.",
+            prog_interface_id
+        ))?)
+    }
 }
 
 impl PartialEq for PciSubclass {
@@ -350,18 +367,10 @@ impl PartialEq for PciSubclass {
 
 impl Eq for PciSubclass {}
 
-impl Index<&u8> for PciSubclass {
-    type Output = PciProgInterface;
-
-    fn index(&self, index: &u8) -> &Self::Output {
-        &self.prog_interfaces[index]
-    }
-}
-
 #[derive(Debug)]
-struct PciProgInterface {
-    id: u8,
-    name: String,
+pub struct PciProgInterface {
+    pub id: u8,
+    pub name: String,
 }
 
 impl PciProgInterface {
@@ -412,8 +421,14 @@ mod tests {
         fn new_with_devices(devices: Vec<FakeDeviceData>) -> Self {
             let expected_id = rand::random::<_>();
             let expected_name = format!("Fake vendor ({})", as_max_len_hex_string(expected_id));
-            let simple_unparsed_data = format!("{} {}", as_max_len_hex_string(expected_id), expected_name);
-            let full_unparsed_data = devices.iter().map(|d| d.unparsed_data.clone()).fold(simple_unparsed_data.clone(), |acc, x| format!("{}\n{}", acc, x));
+            let simple_unparsed_data =
+                format!("{} {}", as_max_len_hex_string(expected_id), expected_name);
+            let full_unparsed_data = devices
+                .iter()
+                .map(|d| d.unparsed_data.clone())
+                .fold(simple_unparsed_data.clone(), |acc, x| {
+                    format!("{}\n{}", acc, x)
+                });
             FakeVendorData {
                 expected_id: expected_id,
                 expected_id_hex_string: as_max_len_hex_string(expected_id),
@@ -509,7 +524,7 @@ mod tests {
         let mut pci_data = PciIdData::new();
         pci_data.add_vendor_from_vendor_pairs(&mut vendor_pair.into_inner())?;
 
-        let vendor = &pci_data.vendors[&fake_vendor_data.expected_id];
+        let vendor = &pci_data.get_vendor(&fake_vendor_data.expected_id)?;
         fake_vendor_data.check(vendor)?;
 
         Ok(())
@@ -562,16 +577,16 @@ mod tests {
         pci_data.add_vendor_from_vendor_pairs(&mut vendor_pair.into_inner())?;
         println!("pci_data: {:#?}", pci_data);
 
-        let vendor = &pci_data.vendors[&fake_vendor_data.expected_id];
+        let vendor = &pci_data.get_vendor(&fake_vendor_data.expected_id)?;
         fake_vendor_data.check(&vendor)?;
 
-        let device = &vendor.devices[&fake_vendor_data.devices[0].expected_id];
+        let device = &vendor.get_device(&fake_vendor_data.devices[0].expected_id)?;
         fake_vendor_data.devices[0].check(device)?;
 
-        let subsystem = &device.subsystems[&(
+        let subsystem = &device.get_subsystem(&(
             fake_vendor_data.devices[0].subsystems[0].expected_subvendor_id,
             fake_vendor_data.devices[0].subsystems[0].expected_subdevice_id,
-        )];
+        ))?;
         fake_vendor_data.devices[0].subsystems[0].check(&subsystem)?;
 
         Ok(())
@@ -591,8 +606,14 @@ mod tests {
             let expected_id = rand::random::<_>();
             let expected_id_hex_string = as_max_len_hex_string(expected_id);
             let expected_name = format!("Fake device ({})", as_max_len_hex_string(expected_id));
-            let simple_unparsed_data = format!("\t{} {}", as_max_len_hex_string(expected_id), expected_name);
-            let full_unparsed_data = subsystems.iter().map(|d| d.unparsed_data.clone()).fold(simple_unparsed_data.clone(), |acc, x| format!("{}\n{}", acc, x));
+            let simple_unparsed_data =
+                format!("\t{} {}", as_max_len_hex_string(expected_id), expected_name);
+            let full_unparsed_data = subsystems
+                .iter()
+                .map(|d| d.unparsed_data.clone())
+                .fold(simple_unparsed_data.clone(), |acc, x| {
+                    format!("{}\n{}", acc, x)
+                });
             FakeDeviceData {
                 expected_id: expected_id,
                 expected_id_hex_string: expected_id_hex_string.clone(),
@@ -677,7 +698,7 @@ mod tests {
         vendor_data.add_device_from_device_pairs(&mut device_pair.into_inner())?;
         println!("vendor_data: {:#?}", vendor_data);
 
-        let device_data = &vendor_data.devices[&fake_device_data.expected_id];
+        let device_data = &vendor_data.get_device(&fake_device_data.expected_id)?;
         assert_eq!(device_data.id, fake_device_data.expected_id);
         assert_eq!(device_data.name, fake_device_data.expected_name);
         Ok(())
@@ -720,13 +741,13 @@ mod tests {
         vendor.add_device_from_device_pairs(&mut device_pair.into_inner())?;
         println!("vendor: {:#?}", vendor);
 
-        let device = &vendor.devices[&fake_device_data.expected_id];
+        let device = &vendor.get_device(&fake_device_data.expected_id)?;
         fake_device_data.check(device)?;
 
-        let subsystem = &device.subsystems[&(
+        let subsystem = &device.get_subsystem(&(
             fake_device_data.subsystems[0].expected_subvendor_id,
             fake_device_data.subsystems[0].expected_subdevice_id,
-        )];
+        ))?;
         fake_device_data.subsystems[0].check(&subsystem)?;
 
         Ok(())
@@ -879,10 +900,10 @@ mod tests {
         device.add_subsystem_from_subsystem_pairs(&mut subsystem_pair.into_inner())?;
         println!("{:#?}", &device);
 
-        let subsystem = &device.subsystems[&(
+        let subsystem = &device.get_subsystem(&(
             fake_subsystem_data.expected_subvendor_id,
             fake_subsystem_data.expected_subdevice_id,
-        )];
+        ))?;
         fake_subsystem_data.check(&subsystem)?;
 
         Ok(())
@@ -903,7 +924,12 @@ mod tests {
             let expected_id_hex_string = as_max_len_hex_string(expected_id);
             let expected_name = format!("Fake class ({})", as_max_len_hex_string(expected_id));
             let simple_unparsed_data = format!("C {} {}", expected_id_hex_string, expected_name);
-            let full_unparsed_data = subclasses.iter().map(|d| d.unparsed_data.clone()).fold(simple_unparsed_data.clone(), |acc, x| format!("{}\n{}", acc, x));
+            let full_unparsed_data = subclasses
+                .iter()
+                .map(|d| d.unparsed_data.clone())
+                .fold(simple_unparsed_data.clone(), |acc, x| {
+                    format!("{}\n{}", acc, x)
+                });
             FakeClassData {
                 expected_id: expected_id,
                 expected_id_hex_string: expected_id_hex_string.clone(),
@@ -999,7 +1025,7 @@ mod tests {
         let mut pci_data = PciIdData::new();
         pci_data.add_class_from_class_pairs(&mut class_pair.into_inner())?;
 
-        let class = &pci_data.classes[&fake_class_data.expected_id];
+        let class = &pci_data.get_class(&fake_class_data.expected_id)?;
         fake_class_data.check(class)?;
 
         Ok(())
@@ -1016,7 +1042,8 @@ mod tests {
         let class_end = fake_class_data.simple_unparsed_data.len();
         let subclass_start = class_end + 1;
         println!("{}", subclass_start);
-        let subclass_end = subclass_start + fake_class_data.subclasses[0].simple_unparsed_data.len();
+        let subclass_end =
+            subclass_start + fake_class_data.subclasses[0].simple_unparsed_data.len();
         println!("{}", subclass_end);
         let prog_if_start = subclass_end + 1;
 
@@ -1049,13 +1076,14 @@ mod tests {
         pci_data.add_class_from_class_pairs(&mut class_pair.into_inner())?;
         println!("pci_data: {:#?}", pci_data);
 
-        let class = &pci_data.classes[&fake_class_data.expected_id];
+        let class = &pci_data.get_class(&fake_class_data.expected_id)?;
         fake_class_data.check(&class)?;
 
-        let subclass = &class.subclasses[&fake_class_data.subclasses[0].expected_id];
+        let subclass = &class.get_subclass(&fake_class_data.subclasses[0].expected_id)?;
         fake_class_data.subclasses[0].check(subclass)?;
 
-        let prog_if = &subclass.prog_interfaces[&fake_class_data.subclasses[0].prog_ifs[0].expected_id];
+        let prog_if =
+            &subclass.get_prog_interface(&fake_class_data.subclasses[0].prog_ifs[0].expected_id)?;
         fake_class_data.subclasses[0].prog_ifs[0].check(&prog_if)?;
 
         Ok(())
@@ -1076,7 +1104,12 @@ mod tests {
             let expected_id_hex_string = as_max_len_hex_string(expected_id);
             let expected_name = format!("Fake subclass ({})", as_max_len_hex_string(expected_id));
             let simple_unparsed_data = format!("\t{} {}", expected_id_hex_string, expected_name);
-            let full_unparsed_data = prog_ifs.iter().map(|d| d.unparsed_data.clone()).fold(simple_unparsed_data.clone(), |acc, x| format!("{}\n{}", acc, x));
+            let full_unparsed_data = prog_ifs
+                .iter()
+                .map(|d| d.unparsed_data.clone())
+                .fold(simple_unparsed_data.clone(), |acc, x| {
+                    format!("{}\n{}", acc, x)
+                });
             FakeSubclassData {
                 expected_id: expected_id,
                 expected_id_hex_string: expected_id_hex_string.clone(),
@@ -1163,7 +1196,7 @@ mod tests {
         class.add_subclass_from_subclass_pairs(&mut subclass_pair.into_inner())?;
         println!("{:#?}", &class);
 
-        let subclass = &class.subclasses[&fake_subclass_data.expected_id];
+        let subclass = &class.get_subclass(&fake_subclass_data.expected_id)?;
         fake_subclass_data.check(&subclass)?;
 
         Ok(())
@@ -1174,7 +1207,10 @@ mod tests {
         let fake_prog_if_data = FakeProgIfaceData::new();
         let fake_subclass_data = FakeSubclassData::new_with_prog_ifs(vec![fake_prog_if_data]);
 
-        println!("Unparsed_data: {:?}", &fake_subclass_data.simple_unparsed_data);
+        println!(
+            "Unparsed_data: {:?}",
+            &fake_subclass_data.simple_unparsed_data
+        );
 
         let unparsed_subclass_string_len = fake_subclass_data.simple_unparsed_data.len();
 
@@ -1196,7 +1232,8 @@ mod tests {
             ]
         };
 
-        let mut parsed_subclass = PciIdsParser::parse(Rule::subclass, &fake_subclass_data.unparsed_data)?;
+        let mut parsed_subclass =
+            PciIdsParser::parse(Rule::subclass, &fake_subclass_data.unparsed_data)?;
         println!("parsed_subclass: {:#?}", &parsed_subclass);
         let subclass_pair = parsed_subclass.next().context("No parsed subclass.")?;
         println!("subclass_pair: {:#?}", &subclass_pair);
@@ -1205,7 +1242,7 @@ mod tests {
         class.add_subclass_from_subclass_pairs(&mut subclass_pair.into_inner())?;
         println!("class: {:#?}", class);
 
-        let subclass = &class.subclasses[&fake_subclass_data.expected_id];
+        let subclass = &class.get_subclass(&fake_subclass_data.expected_id)?;
         fake_subclass_data.check(subclass)?;
 
         Ok(())
@@ -1307,7 +1344,7 @@ mod tests {
         subclass.add_prog_if_from_prog_if_pairs(&mut prog_if_pair.into_inner())?;
         println!("{:#?}", &subclass);
 
-        let prog_if = &subclass.prog_interfaces[&fake_prog_if_data.expected_id];
+        let prog_if = &subclass.get_prog_interface(&fake_prog_if_data.expected_id)?;
         fake_prog_if_data.check(&prog_if)?;
 
         Ok(())
@@ -1316,30 +1353,31 @@ mod tests {
     #[test]
     fn test_full_parse() -> Result<()> {
         let vendors = vec![
-            FakeVendorData::new_with_devices(
-                vec![FakeDeviceData::new_with_subsystems(
-                    vec![FakeSubsystemData::new(),
-                         FakeSubsystemData::new()
-                    ]
-                )]
-            ),
+            FakeVendorData::new_with_devices(vec![FakeDeviceData::new_with_subsystems(vec![
+                FakeSubsystemData::new(),
+                FakeSubsystemData::new(),
+            ])]),
             FakeVendorData::new_with_devices(vec![FakeDeviceData::new()]),
             FakeVendorData::new(),
         ];
 
         let classes = vec![
-            FakeClassData::new_with_subclasses(
-                vec![FakeSubclassData::new_with_prog_ifs(
-                    vec![FakeProgIfaceData::new(),
-                         FakeProgIfaceData::new()]
-                )]
-            ),
+            FakeClassData::new_with_subclasses(vec![FakeSubclassData::new_with_prog_ifs(vec![
+                FakeProgIfaceData::new(),
+                FakeProgIfaceData::new(),
+            ])]),
             FakeClassData::new_with_subclasses(vec![FakeSubclassData::new()]),
             FakeClassData::new(),
         ];
 
-        let vendor_data = vendors.iter().map(|d| d.unparsed_data.clone()).fold(String::new(), |acc, x| format!("{}\n{}", acc, x));
-        let class_data = classes.iter().map(|d| d.unparsed_data.clone()).fold(String::new(), |acc, x| format!("{}\n{}", acc, x));
+        let vendor_data = vendors
+            .iter()
+            .map(|d| d.unparsed_data.clone())
+            .fold(String::new(), |acc, x| format!("{}\n{}", acc, x));
+        let class_data = classes
+            .iter()
+            .map(|d| d.unparsed_data.clone())
+            .fold(String::new(), |acc, x| format!("{}\n{}", acc, x));
         let unparsed_data = vendor_data + &class_data;
 
         println!("Unparsed_data: {:?}", unparsed_data);
@@ -1349,33 +1387,49 @@ mod tests {
         println!("{:#?}", &pci_data);
 
         for vendor in vendors {
-            if !pci_data.vendors.contains_key(&vendor.expected_id) {
-                return Err(anyhow!("Vendor didn't parse correctly: {}", vendor.simple_unparsed_data));
-            }
+            let pci_vendor = pci_data.get_vendor(&vendor.expected_id).context(format!(
+                "Vendor didn't parse correctly: {}",
+                vendor.simple_unparsed_data
+            ))?;
             for device in vendor.devices {
-                if !pci_data.vendors[&vendor.expected_id].devices.contains_key(&device.expected_id) {
-                    return Err(anyhow!("Device didn't parse correctly: {}", device.simple_unparsed_data));
-                }
+                let pci_device = pci_vendor.get_device(&device.expected_id).context(format!(
+                    "Device didn't parse correctly: {}",
+                    device.simple_unparsed_data
+                ))?;
                 for subsystem in device.subsystems {
-                    if !pci_data.vendors[&vendor.expected_id].devices[&device.expected_id].subsystems.contains_key(&(subsystem.expected_subvendor_id, subsystem.expected_subdevice_id)) {
-                        return Err(anyhow!("Subsystem didn't parse correctly: {}", device.simple_unparsed_data));
-                    }
+                    let _pci_subsystem = pci_device
+                        .get_subsystem(&(
+                            subsystem.expected_subvendor_id,
+                            subsystem.expected_subdevice_id,
+                        ))
+                        .context(format!(
+                            "Subsystem didn't parse correctly: {}",
+                            subsystem.unparsed_data
+                        ))?;
                 }
             }
         }
 
         for class in classes {
-            if !pci_data.classes.contains_key(&class.expected_id) {
-                return Err(anyhow!("Class didn't parse correctly: {}", class.simple_unparsed_data));
-            }
+            let pci_class = pci_data.get_class(&class.expected_id).context(format!(
+                "Class didn't parse correctly: {}",
+                class.simple_unparsed_data
+            ))?;
             for subclass in class.subclasses {
-                if !pci_data.classes[&class.expected_id].subclasses.contains_key(&subclass.expected_id) {
-                    return Err(anyhow!("Subclass didn't parse correctly: {}", subclass.simple_unparsed_data));
-                }
+                let pci_subclass =
+                    pci_class
+                        .get_subclass(&subclass.expected_id)
+                        .context(format!(
+                            "Subclass didn't parse correctly: {}",
+                            subclass.simple_unparsed_data
+                        ))?;
                 for prog_if in subclass.prog_ifs {
-                    if !pci_data.classes[&class.expected_id][&subclass.expected_id].prog_interfaces.contains_key(&prog_if.expected_id) {
-                        return Err(anyhow!("Programming interface didn't parse correctly: {}", subclass.simple_unparsed_data));
-                    }
+                    let _pci_prog_interface = pci_subclass
+                        .get_prog_interface(&prog_if.expected_id)
+                        .context(format!(
+                            "Programming interface didn't parse correctly: {}",
+                            prog_if.unparsed_data
+                        ))?;
                 }
             }
         }
