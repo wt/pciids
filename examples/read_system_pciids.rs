@@ -4,7 +4,12 @@ use anyhow::Result;
 
 #[derive(structopt::StructOpt)]
 struct Args {
-    #[structopt(long = "pci-ids-file", default_value = "/usr/share/misc/pci.ids")]
+    #[structopt(long = "pci-ids-file")]
+    #[cfg_attr(
+        target_os = "linux",
+        structopt(default_value = "/usr/share/misc/pci.ids")
+    )]
+    #[cfg_attr(target_os = "redox", structopt(default_value = "/share/misc/pci.ids"))]
     pci_ids_file: String,
 }
 
