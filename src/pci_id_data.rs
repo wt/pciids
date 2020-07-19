@@ -19,7 +19,15 @@ impl PciIdData {
             classes: PciClasses::new(),
         }
     }
+}
 
+impl Default for PciIdData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PciIdData {
     pub fn add_pci_ids_data(&mut self, pciids_data_stream: &mut dyn std::io::Read) -> Result<()> {
         let mut num_vendors = 0;
         let mut num_classes = 0;
@@ -65,15 +73,15 @@ impl PciIdData {
         &mut self,
         vendor_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
-        let vendor_id_pair = vendor_pairs.next().ok_or(anyhow!("No vendor id found."))?;
+        let vendor_id_pair = vendor_pairs.next().ok_or_else(|| anyhow!("No vendor id found."))?;
         let vendor_id = u16::from_str_radix(vendor_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid vendor_id: {}", vendor_id_pair.as_str()))?;
         let vendor_name = vendor_pairs
             .next()
-            .ok_or(anyhow!("No vendor name found."))?
+            .ok_or_else(|| anyhow!("No vendor name found."))?
             .as_str();
         let mut pci_vendor = PciVendor::new(vendor_id, &vendor_name);
-        while let Some(device_pair) = vendor_pairs.next() {
+        for device_pair in vendor_pairs {
             pci_vendor.add_device_from_device_pairs(&mut device_pair.into_inner())?;
         }
         self.vendors.entry(vendor_id).or_insert(pci_vendor);
@@ -84,22 +92,22 @@ impl PciIdData {
         Ok(self
             .vendors
             .get(&vendor_id)
-            .ok_or(anyhow!("Vendor {} not found.", vendor_id))?)
+            .ok_or_else(|| anyhow!("Vendor {} not found.", vendor_id))?)
     }
 
     fn add_class_from_class_pairs(
         &mut self,
         class_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
-        let class_id_pair = class_pairs.next().ok_or(anyhow!("No class id found."))?;
+        let class_id_pair = class_pairs.next().ok_or_else(|| anyhow!("No class id found."))?;
         let class_id = u8::from_str_radix(class_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid class_id: {}", class_id_pair.as_str()))?;
         let class_name = class_pairs
             .next()
-            .ok_or(anyhow!("No class name found."))?
+            .ok_or_else(|| anyhow!("No class name found."))?
             .as_str();
         let mut class = PciClass::new(class_id, &class_name);
-        while let Some(subclass_pair) = class_pairs.next() {
+        for subclass_pair in class_pairs {
             class.add_subclass_from_subclass_pairs(&mut subclass_pair.into_inner())?;
         }
         self.classes.entry(class_id).or_insert(class);
@@ -110,7 +118,7 @@ impl PciIdData {
         Ok(self
             .classes
             .get(&class_id)
-            .ok_or(anyhow!("Class {} not found.", class_id))?)
+            .ok_or_else(|| anyhow!("Class {} not found.", class_id))?)
     }
 }
 
@@ -136,15 +144,15 @@ impl PciVendor {
         &mut self,
         device_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
-        let device_id_pair = device_pairs.next().ok_or(anyhow!("No device id found."))?;
+        let device_id_pair = device_pairs.next().ok_or_else(|| anyhow!("No device id found."))?;
         let device_id = u16::from_str_radix(device_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid device: {}", device_id_pair.as_str()))?;
         let device_name = device_pairs
             .next()
-            .ok_or(anyhow!("No device name found."))?
+            .ok_or_else(|| anyhow!("No device name found."))?
             .as_str();
         let mut pci_device = PciDevice::new(device_id, &device_name);
-        while let Some(subsystem_pair) = device_pairs.next() {
+        for subsystem_pair in device_pairs {
             pci_device.add_subsystem_from_subsystem_pairs(&mut subsystem_pair.into_inner())?;
         }
         self.devices.entry(device_id).or_insert(pci_device);
@@ -155,7 +163,7 @@ impl PciVendor {
         Ok(self
             .devices
             .get(&device_id)
-            .ok_or(anyhow!("Device {} not found.", device_id))?)
+            .ok_or_else(|| anyhow!("Device {} not found.", device_id))?)
     }
 }
 
@@ -189,23 +197,23 @@ impl PciDevice {
     ) -> Result<()> {
         let subsystem_id_pair = subsystem_pairs
             .next()
-            .ok_or(anyhow!("No subsystem id found."))?;
+            .ok_or_else(|| anyhow!("No subsystem id found."))?;
         let mut subsystem_id_inners = match subsystem_id_pair.as_rule() {
             Rule::subsystem_id => Ok(subsystem_id_pair.into_inner()),
             _ => Err(anyhow!("Tried to add non subsystem to subsystem data.")),
         }?;
         let subvendor_id_pair = subsystem_id_inners
             .next()
-            .ok_or(anyhow!("No subvendor id found."))?;
+            .ok_or_else(|| anyhow!("No subvendor id found."))?;
         let subvendor_id = u16::from_str_radix(subvendor_id_pair.as_str(), 16)?;
         debug!("subvendor_id_pair: {:#?}", &subvendor_id_pair);
         let subdevice_id_pair = subsystem_id_inners
             .next()
-            .ok_or(anyhow!("No subdevice id found."))?;
+            .ok_or_else(|| anyhow!("No subdevice id found."))?;
         let subdevice_id = u16::from_str_radix(subdevice_id_pair.as_str(), 16)?;
         let subsystem_name = subsystem_pairs
             .next()
-            .ok_or(anyhow!("No subsystem name found."))?
+            .ok_or_else(|| anyhow!("No subsystem name found."))?
             .as_str();
         let pci_subsystem = PciSubsystem::new(subvendor_id, subdevice_id, &subsystem_name);
         self.subsystems
@@ -215,7 +223,7 @@ impl PciDevice {
     }
 
     pub fn get_subsystem(&self, subsystem_id: &(u16, u16)) -> Result<&PciSubsystem> {
-        Ok(self.subsystems.get(&subsystem_id).ok_or(anyhow!(
+        Ok(self.subsystems.get(&subsystem_id).ok_or_else(|| anyhow!(
             "Subsystem {} {} not found.",
             subsystem_id.0,
             subsystem_id.1
@@ -282,15 +290,15 @@ impl PciClass {
     ) -> Result<()> {
         let subclass_id_pair = subclass_pairs
             .next()
-            .ok_or(anyhow!("No subclass id found."))?;
+            .ok_or_else(|| anyhow!("No subclass id found."))?;
         let subclass_id = u8::from_str_radix(subclass_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid subclass: {}", subclass_id_pair.as_str()))?;
         let subclass_name = subclass_pairs
             .next()
-            .ok_or(anyhow!("No subclass name found."))?
+            .ok_or_else(|| anyhow!("No subclass name found."))?
             .as_str();
         let mut subclass = PciSubclass::new(subclass_id, &subclass_name);
-        while let Some(prog_if_pair) = subclass_pairs.next() {
+        for prog_if_pair in subclass_pairs {
             subclass.add_prog_if_from_prog_if_pairs(&mut prog_if_pair.into_inner())?;
         }
         self.subclasses.entry(subclass_id).or_insert(subclass);
@@ -301,7 +309,7 @@ impl PciClass {
         Ok(self
             .subclasses
             .get(&subclass_id)
-            .ok_or(anyhow!("Subclass {} not found.", subclass_id))?)
+            .ok_or_else(|| anyhow!("Subclass {} not found.", subclass_id))?)
     }
 }
 
@@ -335,7 +343,7 @@ impl PciSubclass {
     ) -> Result<()> {
         let prog_if_id_pair = prog_if_pairs
             .next()
-            .ok_or(anyhow!("No programming interface id found."))?;
+            .ok_or_else(|| anyhow!("No programming interface id found."))?;
         let prog_if_id = u8::from_str_radix(prog_if_id_pair.as_str(), 16).with_context(|| {
             format!(
                 "Invalid programming interface: {}",
@@ -344,7 +352,7 @@ impl PciSubclass {
         })?;
         let prog_if_name = prog_if_pairs
             .next()
-            .ok_or(anyhow!("No programming interface name found."))?
+            .ok_or_else(|| anyhow!("No programming interface name found."))?
             .as_str();
         let prog_if = PciProgInterface::new(prog_if_id, &prog_if_name);
         self.prog_interfaces.entry(prog_if_id).or_insert(prog_if);
@@ -352,7 +360,7 @@ impl PciSubclass {
     }
 
     pub fn get_prog_interface(&self, prog_interface_id: &u8) -> Result<&PciProgInterface> {
-        Ok(self.prog_interfaces.get(&prog_interface_id).ok_or(anyhow!(
+        Ok(self.prog_interfaces.get(&prog_interface_id).ok_or_else(|| anyhow!(
             "Programming interface {} not found.",
             prog_interface_id
         ))?)
