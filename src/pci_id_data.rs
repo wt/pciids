@@ -35,9 +35,6 @@ impl PciIdData {
         info!("Parsing pci.id data!");
         let mut unparsed_data = String::new();
         pciids_data_stream.read_to_string(&mut unparsed_data)?;
-        if let Err(parse) = PciIdsParser::parse(Rule::file, &unparsed_data) {
-            println!("{:?}", parse);
-        }
         if let Ok(parse) = PciIdsParser::parse(Rule::file, &unparsed_data) {
             for line_pair in parse {
                 match line_pair.as_rule() {
