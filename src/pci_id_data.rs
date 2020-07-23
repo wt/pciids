@@ -40,12 +40,12 @@ impl PciIdData {
                 match line_pair.as_rule() {
                     Rule::vendor => {
                         num_vendors += 1;
-                        info!("vendor: {:#?}", &line_pair);
+                        debug!("vendor: {:#?}", &line_pair);
                         self.add_vendor_from_vendor_pairs(&mut line_pair.into_inner())?;
                     }
                     Rule::class => {
                         num_classes += 1;
-                        info!("class: {:#?}", &line_pair);
+                        debug!("class: {:#?}", &line_pair);
                         self.add_class_from_class_pairs(&mut line_pair.into_inner())?;
                     }
                     Rule::EOI => info!("End of input reached."),
