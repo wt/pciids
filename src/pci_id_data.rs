@@ -70,7 +70,9 @@ impl PciIdData {
         &mut self,
         vendor_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
-        let vendor_id_pair = vendor_pairs.next().ok_or_else(|| anyhow!("No vendor id found."))?;
+        let vendor_id_pair = vendor_pairs
+            .next()
+            .ok_or_else(|| anyhow!("No vendor id found."))?;
         let vendor_id = u16::from_str_radix(vendor_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid vendor_id: {}", vendor_id_pair.as_str()))?;
         let vendor_name = vendor_pairs
@@ -96,7 +98,9 @@ impl PciIdData {
         &mut self,
         class_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
-        let class_id_pair = class_pairs.next().ok_or_else(|| anyhow!("No class id found."))?;
+        let class_id_pair = class_pairs
+            .next()
+            .ok_or_else(|| anyhow!("No class id found."))?;
         let class_id = u8::from_str_radix(class_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid class_id: {}", class_id_pair.as_str()))?;
         let class_name = class_pairs
@@ -141,7 +145,9 @@ impl PciVendor {
         &mut self,
         device_pairs: &mut pest::iterators::Pairs<Rule>,
     ) -> Result<()> {
-        let device_id_pair = device_pairs.next().ok_or_else(|| anyhow!("No device id found."))?;
+        let device_id_pair = device_pairs
+            .next()
+            .ok_or_else(|| anyhow!("No device id found."))?;
         let device_id = u16::from_str_radix(device_id_pair.as_str(), 16)
             .with_context(|| format!("Invalid device: {}", device_id_pair.as_str()))?;
         let device_name = device_pairs
@@ -220,11 +226,10 @@ impl PciDevice {
     }
 
     pub fn get_subsystem(&self, subsystem_id: &(u16, u16)) -> Result<&PciSubsystem> {
-        Ok(self.subsystems.get(&subsystem_id).ok_or_else(|| anyhow!(
-            "Subsystem {} {} not found.",
-            subsystem_id.0,
-            subsystem_id.1
-        ))?)
+        Ok(self
+            .subsystems
+            .get(&subsystem_id)
+            .ok_or_else(|| anyhow!("Subsystem {} {} not found.", subsystem_id.0, subsystem_id.1))?)
     }
 }
 
@@ -357,10 +362,10 @@ impl PciSubclass {
     }
 
     pub fn get_prog_interface(&self, prog_interface_id: &u8) -> Result<&PciProgInterface> {
-        Ok(self.prog_interfaces.get(&prog_interface_id).ok_or_else(|| anyhow!(
-            "Programming interface {} not found.",
-            prog_interface_id
-        ))?)
+        Ok(self
+            .prog_interfaces
+            .get(&prog_interface_id)
+            .ok_or_else(|| anyhow!("Programming interface {} not found.", prog_interface_id))?)
     }
 }
 
