@@ -408,7 +408,9 @@ struct PciIdsParser;
 mod tests {
     use super::*;
     use pest::consumes_to;
+    use rand::{Rng, SeedableRng};
     use std::vec::Vec;
+
 
     fn hex_char_width<T>() -> usize {
         2 * std::mem::size_of::<T>()
@@ -1443,6 +1445,63 @@ mod tests {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    #[bench]
+    fn test_benchmark_complex_load(b: &mut test::Bencher) -> Result<()> {
+        let mut s = String::new();
+
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+
+        s.push_str("# preamble comment\n");
+        s.push('\n');
+        s.push_str("# subpreamble comment\n");
+        for i in 0..(u16::MAX / 5 - 1) {
+            s.push_str("# vendor comment\n");
+            s.push_str(format!("{:02$X}  Vendor {:02$X}\n", i, i, 4).as_str());
+            let num_devices: u16 = rng.gen_range(0, 3);
+            for j in 0..num_devices {
+                let num_subsystems: u16 = rng.gen_range(0, 5);
+                s.push_str("# device comment\n");
+                s.push_str(format!("\t{:02$X}  Device {:02$X}\n", j, j, 4).as_str());
+                for k in 0..num_subsystems {
+                    s.push_str("# subsystem comment\n");
+                    s.push_str(
+                        format!(
+                            "\t\t{:04$X} {:04$X}  Subsystem {:04$X}:{:04$X}\n",
+                            k, k, k, k, 4
+                        )
+                        .as_str(),
+                    );
+                }
+            }
+        }
+        s.push_str("FFFF  Invalid Vendor\n");
+        s.push('\n');
+        for i in 0..(u8::MAX - 1) {
+            s.push_str("# class comment\n");
+            s.push_str(format!("C {:02$X}  Class {:02$X}\n", i, i, 2).as_str());
+            let num_subclasses: u8 = rng.gen_range(1, 3);
+            for j in 0..num_subclasses {
+                let num_prog_ifs: u8 = rng.gen_range(0, 5);
+                s.push_str("# subclass comment\n");
+                s.push_str(format!("\t{:02$X}  Subclass {:02$X}\n", j, j, 2).as_str());
+                for k in 0..num_prog_ifs {
+                    s.push_str("# Programming interface comment\n");
+                    s.push_str(
+                        format!("\t\t{:02$X}  Programming interfaces {:02$X}\n", k, k, 2).as_str(),
+                    );
+                }
+            }
+        }
+        s.push_str("FFFF  Unassigned class\n");
+
+        b.iter(|| {
+            let mut pci_data = PciIdData::new();
+            pci_data.add_pci_ids_data(&mut s.as_bytes()).unwrap()
+        });
 
         Ok(())
     }
