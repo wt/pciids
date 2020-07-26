@@ -14,10 +14,10 @@ keywords = ["pci"]
 [dependencies]
 anyhow = "1.0"
 log = "0.4"
-paw = "1.0"
 pest = "2.0"
 pest_derive = "2.0"
-structopt = { version = "0.3", features = [ "paw" ] }
 
 [dev-dependencies]
+paw = "1.0"
 rand = "^0.7.3"
+structopt = { version = "0.3", features = [ "paw" ] }
