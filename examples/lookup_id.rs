@@ -92,13 +92,20 @@ fn print_device(device_args: Device, pci_data: &PciIdData) -> Result<()> {
         .get_vendor(&device_args.vendor)
         .context("Vendor not found.")?;
     println!("Vendor name: {}", vendor.name);
-    if let Some(device) = device_args.device {
-        println!("Device name: {}", device);
-        if let Some(subsystem) = device_args.subsystem {
-            println!("Subsystem name: {} {}", subsystem.0, subsystem.1);
+    if let Some(device_id) = device_args.device {
+        if let Ok(device) = vendor.get_device(&device_id) {
+            println!("Device name: {}", device.name);
+            if let Some(subsystem_id) = device_args.subsystem {
+                if let Ok(subsystem) = device.get_subsystem(&(subsystem_id.0, subsystem_id.1)) {
+                    println!("Subsystem name: {}", subsystem.name);
+                } else {
+                    println!("Subsystem not found.");
+                }
+            }
         } else {
-            println!("Subsystem not found.");
+            println!("Device not found.");
         }
+
     }
     Ok(())
 }
